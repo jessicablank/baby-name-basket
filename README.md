@@ -13,6 +13,8 @@ no build step and no server — just HTML, CSS, and one JS file.
 | `script.js` | Form validation, submission, QR code |
 | `config.example.js` | Template for local config (committed) |
 | `config.js` | Your real config — **gitignored, never committed** |
+| `build-config.js` | Regenerates `config.js` from env vars at deploy time |
+| `vercel.json` | Vercel build settings |
 
 ## Setup
 
@@ -168,18 +170,63 @@ the real POST never fires. `text/plain` qualifies as a CORS "simple request",
 skipping preflight. The body is still JSON — `Code.gs` parses it explicitly with
 `JSON.parse`.
 
-## Deploying the site
+## Deploying to Vercel
 
-Any static host works (GitHub Pages, Netlify, Vercel). One catch: `config.js` is
-gitignored, so it won't be in the repo your host clones, and the form will silently
-fall back to simulated success.
+`config.js` is gitignored, so Vercel clones a repo that doesn't contain it. Rather
+than committing it, `build-config.js` regenerates it at build time from environment
+variables. `vercel.json` wires that up:
 
-Options, roughly in order of preference:
+```json
+{
+  "buildCommand": "node build-config.js",
+  "outputDirectory": ".",
+  "framework": null
+}
+```
 
-- Have the host write `config.js` during the build from environment variables.
-- Upload it out of band, if your host supports it.
-- Accept that these values are public anyway and commit `config.js` for the deployed
-  copy only.
+The build **fails loudly** if either variable is missing. That's deliberate — a
+missing config would otherwise deploy a site whose form silently pretends to work.
+
+### First deploy
+
+```sh
+vercel link          # create/connect the project
+
+vercel env add SHEETS_WEB_APP_URL production
+vercel env add SHEETS_TOKEN production
+
+vercel --prod
+```
+
+Repeat the two `env add` commands for `preview` and `development` if you want
+preview deployments to work too. Values are prompted for, not passed as arguments,
+so they stay out of your shell history.
+
+After linking, pushes to `main` deploy automatically — `vercel --prod` is only
+needed for the first deploy or manual redeploys.
+
+### Updating a value
+
+Environment variables are read at **build** time, so changing one requires a
+redeploy before it takes effect:
+
+```sh
+vercel env rm SHEETS_WEB_APP_URL production
+vercel env add SHEETS_WEB_APP_URL production
+vercel --prod
+```
+
+### Local builds
+
+Don't run `node build-config.js` locally without the variables set — it exits
+without writing, but with them set it overwrites your hand-written `config.js`.
+For local work, just edit `config.js` directly.
+
+### Windows note
+
+If `vercel` fails with a `PSSecurityException`, PowerShell's execution policy is
+blocking the `.ps1` shim. Use `vercel.cmd` instead, or run
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ## Troubleshooting
 

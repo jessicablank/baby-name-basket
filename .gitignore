@@ -1,8 +1,12 @@
 # Local config containing the Google Apps Script Web App URL
+# Regenerated at build time by build-config.js
 config.js
 
-.env
-.env.local
+.env*
+!.env.example
+
+# Vercel project link + local build cache
+.vercel
 
 .DS_Store
 Thumbs.db

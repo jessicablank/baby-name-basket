@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- SECTION: Meta -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baby Name Basket 
+    </title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Styles -->
+    <link href="style.css" rel="stylesheet" />
+  </head>
+  <body class="app gradient-mesh grain">
+    <div class="floating-shape floating-shape--one" aria-hidden="true"></div>
+    <div class="floating-shape floating-shape--two" aria-hidden="true"></div>
+
+    <main class="shell" id="top">
+      <!-- SECTION: Header -->
+      <header class="header" aria-labelledby="app-title">
+        <div class="header__eyebrow">Baby Blankemeier</div>
+        <h1 id="app-title" class="header__title">Baby Name Basket</h1>
+        <p class="header__subtitle">
+          Drop your favorite name into the basket. Tell us why you love it
+          and who it's from so our little one can see one day.
+        </p>
+      </header>
+
+      <!-- SECTION: Content Layout -->
+      <section class="layout" aria-label="Suggest a baby name">
+        <!-- Form column -->
+        <section class="card card--primary shadow-soft" aria-labelledby="form-title">
+          <h2 id="form-title" class="section-title">Add a name</h2>
+          <p class="section-desc">
+            One name at a time keeps things cozy.
+          </p>
+
+          <form id="name-form" class="form" novalidate>
+            <!-- Name suggestion (required) -->
+            <div class="field">
+              <label for="name" class="field__label">Name suggestion *</label>
+              <input
+                id="name"
+                name="name"
+                class="field__input"
+                type="text"
+                required
+                minlength="1"
+                maxlength="80"
+                autocomplete="off"
+                placeholder="e.g. Leo"
+              />
+              <p class="field__hint">Required — the star of the show.</p>
+              <p class="field__error" data-error-for="name"></p>
+            </div>
+
+            <!-- Meaning/comment (optional) -->
+            <div class="field">
+              <label for="meaning" class="field__label">
+                What does this name mean to you?
+                <span class="field__optional">(optional)</span>
+              </label>
+              <textarea
+                id="meaning"
+                name="meaning"
+                class="field__input field__input--textarea"
+                rows="4"
+                maxlength="400"
+                placeholder="A story, a feeling, a person it reminds you of…"
+              ></textarea>
+              <p class="field__hint">We love little stories and memories.</p>
+            </div>
+
+            <!-- Who's submitting (optional) -->
+            <div class="field">
+              <label for="from" class="field__label">
+                Who is making this suggestion?
+                <span class="field__optional">(optional)</span>
+              </label>
+              <input
+                id="from"
+                name="from"
+                class="field__input"
+                type="text"
+                maxlength="80"
+                autocomplete="name"
+                placeholder="e.g. Aunt Sarah"
+              />
+              <p class="field__hint">So we can say thank you later.</p>
+            </div>
+
+            <!-- Status messages -->
+            <div class="status" aria-live="polite" aria-atomic="true">
+              <div class="status__row status__row--hidden" id="status-pending">
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="status__text">Sending your name to the basket…</span>
+              </div>
+              <div class="status__row status__row--hidden" id="status-success">
+                <span class="status__icon status__icon--success">✓</span>
+                <span class="status__text">Thank you! Your name is in the basket.</span>
+              </div>
+              <div class="status__row status__row--hidden" id="status-error">
+                <span class="status__icon status__icon--error">!</span>
+                <span class="status__text">
+                  Hmm, something went wrong. Please try again in a moment.
+                </span>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form__actions">
+              <button type="submit" class="btn btn--primary" id="submit-btn">
+                Add to basket
+              </button>
+              <button type="reset" class="btn btn--ghost">Clear</button>
+            </div>
+
+            <p class="small-print">
+              By submitting, you agree to have your suggestion added to our private
+              family name list in Google Sheets.
+            </p>
+          </form>
+        </section>
+
+        <!-- QR + info column -->
+        <aside class="card card--secondary shadow-soft" aria-label="Share and info">
+          <h2 class="section-title">Share with the family</h2>
+          <p class="section-desc">
+            Scan the code below to open this page on your phone, or send a
+            screenshot of it to anyone who wants to add a name.
+          </p>
+
+          <!-- SECTION: QR Code -->
+          <div class="qr" aria-live="polite">
+            <div class="qr__code gradient-border shadow-soft" id="qr-container">
+              <!-- QR code is injected here by JavaScript -->
+              <div class="qr__placeholder" id="qr-placeholder">
+                <div class="qr__dots"></div>
+              </div>
+            </div>
+            <p class="qr__url" id="qr-url">Loading link…</p>
+            <button type="button" class="btn btn--secondary" id="copy-link-btn">
+              Copy link
+            </button>
+            <p class="qr__note" id="copy-feedback" aria-live="polite"></p>
+          </div>
+
+          <!-- SECTION: How it works -->
+          <section class="how-it-works" aria-label="How this name basket works">
+            <h3 class="how-it-works__title">Where do the names go?</h3>
+            <ul class="list">
+              <li class="list__item">Every suggestion is added to a private Google Sheet.</li>
+              <li class="list__item">Only we can see, sort, and search the list.</li>
+              <li class="list__item">You can submit as many names as you like.</li>
+            </ul>
+          </section>
+        </aside>
+      </section>
+
+      <!-- SECTION: Footer -->
+      <footer class="footer">
+        <p class="footer__text">
+          Made with love for our growing family.
+        </p>
+      </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

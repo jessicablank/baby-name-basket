@@ -11,7 +11,6 @@ const statusError = document.getElementById("status-error");
 const nameError = document.querySelector('[data-error-for="name"]');
 
 const qrContainer = document.getElementById("qr-container");
-const qrPlaceholder = document.getElementById("qr-placeholder");
 const qrUrlEl = document.getElementById("qr-url");
 const copyBtn = document.getElementById("copy-link-btn");
 const copyFeedback = document.getElementById("copy-feedback");
@@ -164,24 +163,26 @@ function renderQrCode() {
 
   qrUrlEl.textContent = url;
 
-  // Remove placeholder dots
-  if (qrPlaceholder && qrPlaceholder.parentNode) {
-    qrPlaceholder.parentNode.removeChild(qrPlaceholder);
+  if (typeof window.QRCode !== "function") {
+    console.error("QR code library did not load.");
+    return;
   }
 
-  // Render QR into the container
-  // Library exposes global `QRCode`
-  if (window.QRCode) {
-    // Clear any existing code
-    qrContainer.innerHTML = "";
-    new window.QRCode(qrContainer, {
-      text: url,
-      width: 160,
-      height: 160,
-      colorDark: "#1f2933",
-      colorLight: "#ffffff",
-      correctLevel: window.QRCode.CorrectLevel.M,
-    });
+  // Placeholder is only cleared once the library is confirmed available
+  qrContainer.innerHTML = "";
+  new window.QRCode(qrContainer, {
+    text: url,
+    width: 160,
+    height: 160,
+    colorDark: "#1f2933",
+    colorLight: "#ffffff",
+    correctLevel: window.QRCode.CorrectLevel.M,
+  });
+
+  const rendered = qrContainer.querySelector("img, canvas");
+  if (rendered) {
+    rendered.setAttribute("role", "img");
+    rendered.setAttribute("aria-label", "QR code linking to this page");
   }
 }
 

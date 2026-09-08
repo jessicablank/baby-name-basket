@@ -13,8 +13,6 @@ no build step and no server — just HTML, CSS, and one JS file.
 | `script.js` | Form validation, submission, QR code |
 | `config.example.js` | Template for local config (committed) |
 | `config.js` | Your real config — **gitignored, never committed** |
-| `build-config.js` | Regenerates `config.js` from env vars at deploy time |
-| `vercel.json` | Vercel build settings |
 
 ## Setup
 

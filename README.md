@@ -38,28 +38,73 @@ Create a sheet with a tab named `Submissions` and these headers in row 1:
 | Timestamp | Name | Meaning | From | User Agent |
 
 Freeze row 1 (View → Freeze → 1 row) so sorting doesn't scramble the headers.
+(The script creates this tab with headers if it's missing, so this is optional.)
 
 `Timestamp` is written server-side, so it's trustworthy. The client also sends its
 own `submittedAt`, which is ignored — it's whatever the visitor's clock says.
+
+Note the **spreadsheet ID** from the URL — the segment between `/d/` and the next
+`/`. It is exactly 44 characters:
+
+```
+https://docs.google.com/spreadsheets/d/<44-CHARACTER-ID>/edit?gid=0
+```
+
+Copying too much of the URL gives `Illegal spreadsheet id or key`.
 
 ### 3. The Apps Script
 
 From the sheet: Extensions → Apps Script. Replace the contents of `Code.gs` with:
 
 ```javascript
+const SPREADSHEET_ID = 'PASTE_YOUR_SPREADSHEET_ID_HERE';
 const SHEET_NAME = 'Submissions';
+const HEADERS = ['Timestamp', 'Name', 'Meaning', 'From', 'User Agent'];
 const MAX_LEN = { name: 80, meaning: 500, from: 80 };
 
-function doPost(e) {
+function getSheet() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(HEADERS);
+  }
+  return sheet;
+}
+
+function checkToken(token) {
+  const expected = PropertiesService.getScriptProperties().getProperty('SHARED_TOKEN');
+  return !expected || token === expected;
+}
+
+// Token-gated health check: GET /exec?token=...
+function doGet(e) {
+  if (!checkToken(e && e.parameter && e.parameter.token)) {
+    return json({ success: false, error: 'unauthorized' });
+  }
   try {
-    if (!e || !e.postData || !e.postData.contents) return json({ success: false });
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    return json({
+      success: true,
+      spreadsheet: ss.getName(),
+      tabs: ss.getSheets().map((s) => s.getName()),
+      targetTabExists: !!ss.getSheetByName(SHEET_NAME),
+    });
+  } catch (err) {
+    return json({ success: false, error: String(err) });
+  }
+}
+
+function doPost(e) {
+  let authed = false;
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return json({ success: false, error: 'empty body' });
+    }
 
     const body = JSON.parse(e.postData.contents);
-
-    const expected = PropertiesService.getScriptProperties().getProperty('SHARED_TOKEN');
-    if (expected && body.token !== expected) {
-      return json({ success: false, error: 'unauthorized' });
-    }
+    authed = checkToken(body.token);
+    if (!authed) return json({ success: false, error: 'unauthorized' });
 
     const name = clean(body.name, MAX_LEN.name);
     if (!name) return json({ success: false, error: 'name required' });
@@ -68,8 +113,7 @@ function doPost(e) {
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-      sheet.appendRow([
+      getSheet().appendRow([
         new Date(),
         name,
         clean(body.meaning, MAX_LEN.meaning),
@@ -83,7 +127,8 @@ function doPost(e) {
     return json({ success: true });
   } catch (err) {
     console.error(err);
-    return json({ success: false });
+    // Detail only for callers who already proved they hold the token
+    return json(authed ? { success: false, error: String(err) } : { success: false });
   }
 }
 
@@ -99,6 +144,14 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 ```
+
+`openById` is used rather than `getActiveSpreadsheet()` so the script works whether
+or not it's bound to the spreadsheet.
+
+All `.gs` files share one global scope. If you paste this into a second file
+alongside the first, you get
+`SyntaxError: Identifier 'SHEET_NAME' has already been declared` and the whole
+project fails to compile. Keep exactly one copy.
 
 ### 4. The shared token
 
@@ -228,6 +281,51 @@ blocking the `.ps1` shim. Use `vercel.cmd` instead, or run
 
 ## Troubleshooting
 
+Start with the **health check**, which reports what the script can actually see:
+
+```
+https://script.google.com/macros/s/<YOUR_ID>/exec?token=<YOUR_TOKEN>
+```
+
+A healthy response lists the spreadsheet name and its tabs. Anything else names the
+problem directly.
+
+To test a write from the command line, POST a **BOM-free** body. PowerShell's
+`Set-Content -Encoding utf8` prepends a BOM, which makes `JSON.parse` throw
+server-side and yields a confusing bare `{"success":false}`:
+
+```powershell
+[System.IO.File]::WriteAllText("$PWD\body.json", $json,
+  (New-Object System.Text.UTF8Encoding $false))
+```
+
+Also note `/exec` answers a POST with a **302**. `curl -L` won't re-send the body
+across that redirect (you'll get `411 Length Required`), so capture the `Location`
+header and GET it separately. Browsers handle this correctly.
+
+### Reading `doPost` responses
+
+| Response | Meaning |
+| --- | --- |
+| `{"success":true}` | Row written |
+| `{"success":false,"error":"unauthorized"}` | Token mismatch with `SHARED_TOKEN` |
+| `{"success":false,"error":"name required"}` | Empty name field |
+| `{"success":false,"error":"Exception: ..."}` | Runtime error (token was valid) |
+| `{"success":false}` | Exception before auth — usually malformed JSON |
+| HTML page | Script failed to compile; the error text is in the HTML |
+
+### Common failures
+
+**`Illegal spreadsheet id or key`.** `SPREADSHEET_ID` is wrong. It's exactly the
+44 characters between `/d/` and the next `/` — not the whole URL.
+
+**`SyntaxError: Identifier 'X' has already been declared`.** The script exists twice
+across `.gs` files, which share one global scope. Delete the duplicate file.
+
+**HTTP 200 with an HTML body.** Apps Script returns compile errors as a 200 HTML
+page, not an error status. `script.js` therefore requires an explicit
+`success: true` rather than trusting the status code.
+
 **Form always "succeeds" but the sheet is empty.** `config.js` is missing or
 `SHEETS_WEB_APP_URL` is blank, so the simulated path ran. Check the browser console
 for the warning.
@@ -235,8 +333,9 @@ for the warning.
 **Nothing appears under Apps Script → Executions.** The request never reached
 Google. Almost always a stale `/exec` URL or the deployment access setting.
 
-**Execution runs but returns `unauthorized`.** The token in `config.js` doesn't
-match `SHARED_TOKEN` in Script Properties. Watch for trailing whitespace.
+**Deployed site behaves differently from local.** Vercel env vars are baked in at
+build time. After changing the URL or token locally, update the Vercel vars and
+redeploy, or the two will drift apart.
 
 **CORS error in the console.** Something reverted the request to
 `application/json`. See the section above.

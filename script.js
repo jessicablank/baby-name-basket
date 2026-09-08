@@ -88,7 +88,20 @@ async function sendToGoogleSheet(payload) {
     throw new Error("Network response was not ok");
   }
 
-  const data = await response.json().catch(() => ({}));
+  // Apps Script returns HTTP 200 with an HTML error page when the script fails to
+  // compile, so only an explicit success flag counts as success.
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Backend returned non-JSON response: ${text.slice(0, 200)}`);
+  }
+
+  if (data.success !== true) {
+    throw new Error(`Backend error: ${data.error || "unknown"}`);
+  }
+
   return data;
 }
 

@@ -114,7 +114,7 @@ openssl rand -base64 24
 
 Put the **same value** in two places:
 
-1. Apps Script → Project Settings → Script Properties → Add, named `SHARED_TOKEN`.
+1. Google Apps Script → Project Settings → Script Properties → Add, named `SHARED_TOKEN`.
 2. `config.js`, as `SHEETS_TOKEN`.
 
 Script Properties live outside your Apps Script source, so the token stays out of
